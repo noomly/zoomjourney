@@ -103,17 +103,14 @@ let rec load_images path n =
     let* images = load_images path (n - 1) in
     Promise.resolved (image :: images)
 
-let tick images time =
-  let canvas = Option.get (Document.getElementById "canvas" document) in
-  let ctx = CanvasElement.getContext2d canvas in
-
+let tick ctx images time =
   let visibles = get_visibles images time in
 
   List.iter
     (fun (i, image) -> draw_image ctx (List.length images) image time i)
     visibles;
 
-  Promise.resolved ()
+  ()
 
 type input_event = Plus | Minus
 
@@ -130,7 +127,7 @@ let wait_input () =
   Promise.tap promise (fun _ ->
       Document.removeKeyDownEventListener handler document)
 
-let loop images =
+let loop ctx images =
   let rec loop images time =
     (* let* input = wait_input () in *)
     (* let new_time = *)
@@ -140,23 +137,24 @@ let loop images =
     (*   | _ -> time *)
     (* in *)
     (* new_time |> ignore; *)
-    let* _ = tick images (time /. 1000. *. 0.5) in
+    (* let canvas = Option.get (Document.getElementById "canvas" document) in *)
+    (* let ctx = CanvasElement.getContext2d canvas in *)
+    tick ctx images (time /. 1000. *. 0.5);
 
-    Webapi.requestAnimationFrame (fun time -> loop images time |> ignore);
-
-    Promise.resolved ()
+    Webapi.requestCancellableAnimationFrame (fun time ->
+        loop images time |> ignore)
   in
 
-  Webapi.requestAnimationFrame (fun _ -> loop images 0. |> ignore)
+  loop images 0.
 
-let () =
-  let main_async =
-    Js.log "hello world";
-
-    let* images = load_images "interdim" 20 in
-    (* let* images = load_images "test" 4 in *)
-    loop images;
-
-    Promise.resolved ()
-  in
-  main_async |> ignore
+(* let () = *)
+(*   let main_async = *)
+(*     Js.log "hello world"; *)
+(**)
+(*     let* images = load_images "interdim" 20 in *)
+(*     (* let* images = load_images "test" 4 in *) *)
+(*     loop images; *)
+(**)
+(*     Promise.resolved () *)
+(*   in *)
+(*   main_async |> ignore *)
